@@ -3,14 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>팀 일정 대시보드</title>
+    <title>간단한 팀 일정표</title>
     <style>
-        :root {
-            --primary-color: #4a90e2;
-            --secondary-color: #f5f5f5;
-            --border-color: #e0e0e0;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -18,14 +12,13 @@
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
+            font-family: Arial, sans-serif;
+            padding: 20px;
         }
 
-        .calendar-container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
+        .calendar {
+            max-width: 1000px;
+            margin: 0 auto;
         }
 
         .calendar-header {
@@ -35,52 +28,59 @@
             margin-bottom: 20px;
         }
 
-        .view-options button {
-            padding: 8px 16px;
-            margin: 0 5px;
-            border: 1px solid var(--border-color);
-            background: white;
-            cursor: pointer;
-        }
-
-        .view-options button.active {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 1px;
-            background: var(--border-color);
-            border: 1px solid var(--border-color);
+            background: #ddd;
+            border: 1px solid #ddd;
         }
 
         .calendar-cell {
             background: white;
             min-height: 100px;
             padding: 10px;
+            position: relative;
         }
 
-        .calendar-cell.header {
-            background: var(--secondary-color);
-            text-align: center;
+        .calendar-cell .date {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: #666;
+        }
+
+        .calendar-header-cell {
+            background: #f5f5f5;
             padding: 10px;
+            text-align: center;
             font-weight: bold;
         }
 
-        .add-event-btn {
+        .event {
+            margin: 20px 2px 2px 2px;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            color: white;
+            background: #4a90e2;
+            cursor: pointer;
+        }
+
+        .event.meeting { background: #e2574a; }
+        .event.personal { background: #50b45e; }
+        .event.other { background: #9013fe; }
+
+        #addEventBtn {
             position: fixed;
-            bottom: 30px;
-            right: 30px;
-            padding: 15px 25px;
-            background: var(--primary-color);
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #4a90e2;
             color: white;
             border: none;
-            border-radius: 25px;
+            border-radius: 5px;
             cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
         .modal {
@@ -94,21 +94,12 @@
         }
 
         .modal-content {
-            position: relative;
             background: white;
-            margin: 50px auto;
             padding: 20px;
             width: 90%;
             max-width: 500px;
-            border-radius: 8px;
-        }
-
-        .close {
-            position: absolute;
-            right: 20px;
-            top: 10px;
-            font-size: 24px;
-            cursor: pointer;
+            margin: 50px auto;
+            border-radius: 5px;
         }
 
         .form-group {
@@ -121,229 +112,134 @@
         }
 
         .form-group input,
-        .form-group select,
-        .form-group textarea {
+        .form-group select {
             width: 100%;
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
+            padding: 5px;
         }
 
-        .form-group textarea {
-            height: 100px;
-            resize: vertical;
-        }
-
-        .event {
-            margin: 2px 0;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-size: 12px;
+        .close {
+            float: right;
             cursor: pointer;
-        }
-
-        @media (max-width: 768px) {
-            .calendar-cell {
-                min-height: 60px;
-                font-size: 12px;
-            }
+            font-size: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="calendar-container">
+    <div class="calendar">
         <div class="calendar-header">
-            <div class="calendar-title">
-                <h2>2024년 3월</h2>
-            </div>
-            <div class="view-options">
-                <button class="view-btn" data-view="month">월간</button>
-                <button class="view-btn" data-view="week">주간</button>
-                <button class="view-btn" data-view="day">일간</button>
-            </div>
+            <h2 id="currentMonth">2024년 3월</h2>
         </div>
-        <div class="calendar-grid">
+        <div class="calendar-grid" id="calendarGrid">
             <!-- Calendar will be generated by JavaScript -->
         </div>
-        
-        <!-- 일정 추가 버튼 -->
-        <button id="addEventBtn" class="add-event-btn">+ 새 일정</button>
+    </div>
 
-        <!-- 일정 추가 모달 -->
-        <div id="eventModal" class="modal">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <h3>새 일정 추가</h3>
-                <form id="eventForm">
-                    <div class="form-group">
-                        <label for="eventTitle">일정 제목</label>
-                        <input type="text" id="eventTitle" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="eventStart">시작 일시</label>
-                        <input type="datetime-local" id="eventStart" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="eventEnd">종료 일시</label>
-                        <input type="datetime-local" id="eventEnd" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="eventCategory">카테고리</label>
-                        <select id="eventCategory">
-                            <option value="work">업무</option>
-                            <option value="meeting">회의</option>
-                            <option value="personal">개인</option>
-                            <option value="other">기타</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="eventDesc">설명</label>
-                        <textarea id="eventDesc"></textarea>
-                    </div>
-                    <button type="submit">저장</button>
-                </form>
-            </div>
+    <button id="addEventBtn">+ 새 일정</button>
+
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>새 일정</h3>
+            <form id="eventForm">
+                <div class="form-group">
+                    <label>제목</label>
+                    <input type="text" id="eventTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>날짜</label>
+                    <input type="date" id="eventDate" required>
+                </div>
+                <div class="form-group">
+                    <label>카테고리</label>
+                    <select id="eventCategory">
+                        <option value="work">업무</option>
+                        <option value="meeting">회의</option>
+                        <option value="personal">개인</option>
+                        <option value="other">기타</option>
+                    </select>
+                </div>
+                <button type="submit">저장</button>
+            </form>
         </div>
     </div>
 
     <script>
-        // 기본 캘린더 데이터 구조
         class Calendar {
             constructor() {
-                this.events = this.loadEvents();
                 this.currentDate = new Date();
-                this.currentView = 'month';
-                this.init();
-                this.categoryColors = {
-                    work: '#4a90e2',
-                    meeting: '#e2574a',
-                    personal: '#50b45e',
-                    other: '#9013fe'
-                };
+                this.events = JSON.parse(localStorage.getItem('events')) || [];
+                this.initCalendar();
+                this.initModal();
             }
 
-            init() {
+            initCalendar() {
+                this.updateMonthDisplay();
                 this.renderCalendar();
-                this.attachEventListeners();
-                this.initializeModal();
             }
 
-            initializeModal() {
-                const modal = document.getElementById('eventModal');
-                const addBtn = document.getElementById('addEventBtn');
-                const closeBtn = document.querySelector('.close');
-                const form = document.getElementById('eventForm');
-
-                // 모달 열기
-                addBtn.onclick = () => {
-                    modal.style.display = 'block';
-                };
-
-                // 모달 닫기
-                closeBtn.onclick = () => {
-                    modal.style.display = 'none';
-                };
-
-                // 모달 외부 클릭 시 닫기
-                window.onclick = (event) => {
-                    if (event.target === modal) {
-                        modal.style.display = 'none';
-                    }
-                };
-
-                // 폼 제출 처리
-                form.onsubmit = (e) => {
-                    e.preventDefault();
-                    const newEvent = {
-                        id: Date.now(), // 고유 ID 생성
-                        title: document.getElementById('eventTitle').value,
-                        start: document.getElementById('eventStart').value,
-                        end: document.getElementById('eventEnd').value,
-                        category: document.getElementById('eventCategory').value,
-                        description: document.getElementById('eventDesc').value
-                    };
-
-                    this.events.push(newEvent);
-                    this.saveEvents();
-                    this.renderCalendar();
-                    modal.style.display = 'none';
-                    form.reset();
-                };
-            }
-
-            loadEvents() {
-                const savedEvents = localStorage.getItem('calendarEvents');
-                return savedEvents ? JSON.parse(savedEvents) : [];
-            }
-
-            saveEvents() {
-                localStorage.setItem('calendarEvents', JSON.stringify(this.events));
+            updateMonthDisplay() {
+                const months = ['1월', '2월', '3월', '4월', '5월', '6월', 
+                              '7월', '8월', '9월', '10월', '11월', '12월'];
+                const currentMonth = document.getElementById('currentMonth');
+                currentMonth.textContent = `${this.currentDate.getFullYear()}년 ${months[this.currentDate.getMonth()]}`;
             }
 
             renderCalendar() {
-                const grid = document.querySelector('.calendar-grid');
+                const grid = document.getElementById('calendarGrid');
                 grid.innerHTML = '';
 
                 // Add weekday headers
                 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
                 weekdays.forEach(day => {
                     const cell = document.createElement('div');
-                    cell.className = 'calendar-cell header';
+                    cell.className = 'calendar-header-cell';
                     cell.textContent = day;
                     grid.appendChild(cell);
                 });
 
-                // Get the first day of the month
+                // Get first day of month and total days
                 const firstDay = new Date(
                     this.currentDate.getFullYear(),
                     this.currentDate.getMonth(),
                     1
                 ).getDay();
 
-                // Get the number of days in the month
-                const daysInMonth = new Date(
+                const lastDate = new Date(
                     this.currentDate.getFullYear(),
                     this.currentDate.getMonth() + 1,
                     0
                 ).getDate();
 
-                // Add empty cells for days before the first day of the month
+                // Add empty cells for days before first day of month
                 for (let i = 0; i < firstDay; i++) {
                     const cell = document.createElement('div');
-                    cell.className = 'calendar-cell empty';
+                    cell.className = 'calendar-cell';
                     grid.appendChild(cell);
                 }
 
-                // Generate days and add events
-                for (let i = 1; i <= daysInMonth; i++) {
+                // Add days and events
+                for (let day = 1; day <= lastDate; day++) {
                     const cell = document.createElement('div');
                     cell.className = 'calendar-cell';
                     
                     // Add date number
-                    const dateNumber = document.createElement('div');
-                    dateNumber.className = 'date-number';
-                    dateNumber.textContent = i;
-                    cell.appendChild(dateNumber);
+                    const dateDiv = document.createElement('div');
+                    dateDiv.className = 'date';
+                    dateDiv.textContent = day;
+                    cell.appendChild(dateDiv);
 
                     // Add events for this day
-                    const currentDate = new Date(
-                        this.currentDate.getFullYear(),
-                        this.currentDate.getMonth(),
-                        i
-                    );
-
-                    const dayEvents = this.events.filter(event => {
-                        const eventDate = new Date(event.start);
-                        return eventDate.getDate() === i &&
+                    const todayEvents = this.events.filter(event => {
+                        const eventDate = new Date(event.date);
+                        return eventDate.getDate() === day && 
                                eventDate.getMonth() === this.currentDate.getMonth() &&
                                eventDate.getFullYear() === this.currentDate.getFullYear();
                     });
 
-                    dayEvents.forEach(event => {
+                    todayEvents.forEach(event => {
                         const eventDiv = document.createElement('div');
-                        eventDiv.className = 'event';
+                        eventDiv.className = `event ${event.category}`;
                         eventDiv.textContent = event.title;
-                        eventDiv.style.backgroundColor = this.categoryColors[event.category];
                         cell.appendChild(eventDiv);
                     });
 
@@ -351,18 +247,40 @@
                 }
             }
 
-            attachEventListeners() {
-                // View 버튼 이벤트
-                document.querySelectorAll('.view-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        this.currentView = e.target.dataset.view;
-                        this.renderCalendar();
-                    });
-                });
+            initModal() {
+                const modal = document.getElementById('eventModal');
+                const addBtn = document.getElementById('addEventBtn');
+                const closeBtn = document.querySelector('.close');
+                const form = document.getElementById('eventForm');
+
+                addBtn.onclick = () => modal.style.display = 'block';
+                closeBtn.onclick = () => modal.style.display = 'none';
+
+                window.onclick = (event) => {
+                    if (event.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                };
+
+                form.onsubmit = (e) => {
+                    e.preventDefault();
+                    const newEvent = {
+                        title: document.getElementById('eventTitle').value,
+                        date: document.getElementById('eventDate').value,
+                        category: document.getElementById('eventCategory').value
+                    };
+
+                    this.events.push(newEvent);
+                    localStorage.setItem('events', JSON.stringify(this.events));
+                    this.renderCalendar();
+                    
+                    modal.style.display = 'none';
+                    form.reset();
+                };
             }
         }
 
-        // 캘린더 초기화
+        // Initialize calendar
         const calendar = new Calendar();
     </script>
 </body>
